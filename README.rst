@@ -9,7 +9,7 @@ controller which defines new ``getMetadata()`` methods for all instruments. This
 done. An advanced knowledge of Python and the chimera inner workings could be necessary to create an usable plugin out
 of this template. In case of doubts on how to do it, please contact us trough one of the options on the end of this page.
 
-*NOTE:* These keywords are fixed on the code and cannot be changed using this method: ``SIMPLE``, ``BITPIX``, ``NAXIS``,
+**NOTE:** These keywords are fixed on the code and cannot be changed using this method: ``SIMPLE``, ``BITPIX``, ``NAXIS``,
 ``NAXIS1``, ``NAXIS2``, ``EXTEND``, ``BZERO``, ``DATE``, ``AUTHOR``, ``OBJECT``, ``CHECKSUM``, ``DATASUM`` and ``CHM_ID``
 
 Usage
@@ -57,7 +57,7 @@ you want to override the ``getMetadata()`` method.
         name: site
         site: /Site/MyObservatory
 
-*NOTE:* ``chimera-headers`` does not checks if the location of the object is of the type to be configured, so if you do
+**NOTE:** ``chimera-headers`` does not checks if the location of the object is of the type to be configured, so if you do
 ``dome: /FakeCamera/fake`` you won't be alerted by your mistake.
 
 Modified header example
