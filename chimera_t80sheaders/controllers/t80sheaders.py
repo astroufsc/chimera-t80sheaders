@@ -96,103 +96,34 @@ class T80SHeaders(ChimeraObject):
 
     def getMetadataCamera(self, request):
         '''
-        Returns the modified metadata for a camera instrument.
+        Returns the modified metadata for a camera instrument. On T80CamS most of the header metadata is included
+        by the camera driver itself, directly during readout operation. Here we just gather info about the filterwheel.
         '''
-        extra_header_info = self.instrument.get_extra_header_info()
-        md = [('DATE-OBS', ImageUtil.formatDate(extra_header_info.get("frame_start_time", datetime.datetime.utcnow())),
-               'Date exposure started'),
-              # ('FILENAME', ImageUtil.makeFilename(request["filename"])),
-              ('EXPTIME', float(request['exptime']), "exposure time in seconds"),
-              ('INSTRUME', str(self.instrument['camera_model']), 'Custom. Name of instrument'),]
-        #       ('IMAGETYP', request['type'].strip(), 'Custom. Image type'),
-        #       ('SHUTTER', str(request['shutter']), 'Custom. Requested shutter state'),
-        #
-        #       ('CCD',    str(self.instrument['ccd_model']), 'Custom. CCD Model'),
-        #       ('CCD_DIMX', self.instrument.getPhysicalSize()[0], 'Custom. CCD X Dimension Size'),
-        #       ('CCD_DIMY', self.instrument.getPhysicalSize()[1], 'Custom. CCD Y Dimension Size'),
-        #       ('CCDPXSZX', self.instrument.getPixelSize()[0], 'Custom. CCD X Pixel Size [micrometer]'),
-        #       ('CCDPXSZY', self.instrument.getPixelSize()[1], 'Custom. CCD Y Pixel Size [micrometer]')]
-        #
-        if "frame_temperature" in extra_header_info.keys():
-            md += [('HIERARCH T80S DET TEMP', extra_header_info["frame_temperature"], ' Chip temperature (C) '),]
-            # md += [('HIERARCH T80S INS TEMP', extra_header_info["frame_temperature"],
-            #         'Instrument temperature (C) at end of exposure.')]
 
-        focal_length = self.instrument["telescope_focal_length"]
-        if focal_length is not None:  # If there is no telescope_focal_length defined, don't store WCS
-            mode, binning, top, left, width, height = self.instrument._getReadoutModeInfo(request["binning"], request["window"])
-            binFactor = extra_header_info.get("binning_factor", 1.0)
-            pix_w, pix_h = self.instrument.getPixelSize()
-            focal_length = self.instrument["telescope_focal_length"]
-
-            scale_x = binFactor * (((180 / pi) / focal_length) * (pix_w * 0.001))
-            scale_y = binFactor * (((180 / pi) / focal_length) * (pix_h * 0.001))
-
-            full_width, full_height = self.instrument.getPhysicalSize()
-            CRPIX1 = ((int(full_width / 2.0)) - left) - 1
-            CRPIX2 = ((int(full_height / 2.0)) - top) - 1
-
-            # Adding WCS coordinates according to FITS standard.
-            # Quick sheet: http://www.astro.iag.usp.br/~moser/notes/GAi_FITSimgs.html
-            # http://adsabs.harvard.edu/abs/2002A%26A...395.1061G
-            # http://adsabs.harvard.edu/abs/2002A%26A...395.1077C
-            md += [("CRPIX1", CRPIX1, "coordinate system reference pixel"),
-                   ("CRPIX2", CRPIX2, "coordinate system reference pixel"),
-                   ("CD1_1",  scale_x * cos(self.instrument["rotation"]*pi/180.), "transformation matrix element (1,1)"),
-                   ("CD1_2", -scale_y * sin(self.instrument["rotation"]*pi/180.), "transformation matrix element (1,2)"),
-                   ("CD2_1", scale_x * sin(self.instrument["rotation"]*pi/180.), "transformation matrix element (2,1)"),
-                   ("CD2_2", scale_y * cos(self.instrument["rotation"]*pi/180.), "transformation matrix element (2,2)")]
-
-        md += [ ('BUNIT', 'adu', 'physical units of the array values '),        #TODO:
-                ('BLANK', -32768),        #TODO:
-                ('BZERO', '0.0'),        #TODO:
-                ('HIERARCH T80S INS OPER', 'CHIMERA'),
-                ('HIERARCH T80S INS PIXSCALE', ' 0.7400', 'Pixel scale (arcsec)'),   #TODO: convert using self.instrument.getPixelSize()[0] and focal_lenght
-                ('HIERARCH OAJ INS TEMP', ' -999', 'Instrument temperature'),
-                ('HIERARCH T80S DET NAME', self.instrument["ccd_model"], 'Name of detector system '),        #TODO:
-                ('HIERARCH T80S DET CCDS', ' 1 ', ' Number of CCDs in the mosaic'),        #TODO:
-                ('HIERARCH T80S DET CHIPID', ' 0 ', ' Detector CCD identification'),        #TODO:
-                ('HIERARCH T80S DET NX', self.instrument.getPhysicalSize()[0], ' Number of pixels along X '),
-                ('HIERARCH T80S DET NY', self.instrument.getPhysicalSize()[1], ' Number of pixels along Y'),
-                ('HIERARCH T80S DET PSZX', self.instrument.getPixelSize()[0], ' Size of pixel in X (mu) '),
-                ('HIERARCH T80S DET PSZY', self.instrument.getPixelSize()[1], ' Size of pixel in Y (mu) '),
-                ('HIERARCH T80S DET EXP TYPE', 'LIGHT', ' Type of exp as known to the CCD SW '),        #TODO:
-                ('HIERARCH T80S DET READ MODE', 'SLOW', ' Readout method'),        #TODO:
-                ('HIERARCH T80S DET READ SPEED', '1 MHz', ' Readout speed'),        #TODO:
-                ('HIERARCH T80S DET READ CLOCK', 'DSI 68, High Gain, 1x1', ' Type of exp as known to the CCD SW'),        #TODO:
-                ('HIERARCH T80S DET OUTPUTS', ' 2 ', 'Number of output ports used on chip'),        #TODO:
-                ('HIERARCH T80S DET REQTIM', float(request['exptime']), 'Requested exposure time (sec)')]
-
-        for i_output in range(1, 17):
-            md += [
-            ('HIERARCH T80S DET OUT%i ID' % i_output, ' 00 ', ' Identification for OUT1 readout port '),        #TODO:
-            ('HIERARCH T80S DET OUT%i X' % i_output, ' 1 ', ' X location of output in the chip. (lower left pixel)'),        #TODO:
-            ('HIERARCH T80S DET OUT%i Y' % i_output, ' 1 ', ' Y location of output in the chip. (lower left pixel)'),        #TODO:
-            ('HIERARCH T80S DET OUT%i NX' % i_output, ' 512',        #TODO:
-             ' Number of image pixels read to port 1 in X. Not including pre or overscan'),        #TODO:
-            ('HIERARCH T80S DET OUT%i NY' % i_output, ' 1024 ',        #TODO:
-             ' Number of image pixels read to port 1 in Y. Not including pre or overscan'),        #TODO:
-            ('HIERARCH T80S DET OUT%i IMSC' % i_output, ' [1:512,1:1024] ',        #TODO:
-             ' Image region for OUT%i in format [xmin:xmax,ymin:ymax] '),        #TODO:
-            ('HIERARCH T80S DET OUT%i PRSCX' % i_output, ''),
-            ('HIERARCH T80S DET OUT%i PRSCY' % i_output, ''),
-            ('HIERARCH T80S DET OUT%i OVSCX' % i_output, ''),
-            ('HIERARCH T80S DET OUT%i OVSCY' % i_output,''),
-            ('HIERARCH T80S DET OUT%i GAIN' % i_output, ' 1.12 ', ' Gain for output. Conversion from ADU to electron (e-/ADU)'),        #TODO:
-            ('HIERARCH T80S DET OUT%i RON' % i_output, ' 9.8900 ', ' Readout-noise of OUT1 at selected Gain (e-)'),        #TODO:
-            ('HIERARCH T80S DET OUT%i SATUR' % i_output, ' 100000.0 ', ' Saturation of OUT1 (e-)')        #TODO:
-            ]
-        md += [('FILTER', str(self.instrument.getFilter()), 'Filter used for this observation')]
-
-        return md
+        return [('FILTER', str(self.instrument.getFilter()), 'Filter used for this observation')]
 
 
     def getMetadataFocuser(self, request):
         '''
         Returns the modified metadata for a focuser instrument.
         '''
-        return [('HIERARCH T80S TEL FOCU SCALE', ' 57.30', ' Focus scale (arcsec/mm)'),  #TODO
-                ('HIERARCH T80S TEL FOCU VALUE', self.instrument.getPosition(), ' M2 setting (mm) ')] #TODO: Check if it is mm
+        x, y, z, u, v = self.getRealPosition()
+        dx, dy, dz, du, dv = self.getOffset()
+
+        return [('HIERARCH T80S TEL FOCU HEX X', ' %f '%x, ' Current hexapod position in x (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX Y', ' %f '%y, ' Current hexapod position in y (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX Z', ' %f '%z, ' Current hexapod position in z (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX U', ' %f '%u, ' Current hexapod position in U (degree) '),
+                ('HIERARCH T80S TEL FOCU HEX V', ' %f '%v, ' Current hexapod position in V (degree) '),
+                ('HIERARCH T80S TEL FOCU HEX DX', ' %f '%dx, ' Current hexapod offset in x (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX DY', ' %f '%dy, ' Current hexapod offset in y (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX DZ', ' %f '%dz, ' Current hexapod offset in z (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX DU', ' %f '%du, ' Current hexapod offset in U (degree) '),
+                ('HIERARCH T80S TEL FOCU HEX DV', ' %f '%dv, ' Current hexapod offset in V (degree) '),
+                ('HIERARCH T80S TEL FOCU LEN', ' %f '%z, ' Current focus position (mm) '),
+                ('HIERARCH T80S TEL FOCU SCALE', ' 55.56', ' Focus scale (arcsec/mm) '),  #TODO
+                ('HIERARCH T80S TEL FOCU VALUE', ' %f '%dz, ' Current focus offset (mm) '),
+                ]
 
 
     def getMetadataDome(self, request):
@@ -225,6 +156,25 @@ class T80SHeaders(ChimeraObject):
         #         ('RA', self.instrument.getRa().toHMS().__str__(), 'Custom. Right ascension of the observed object'),
         #         ('DEC', self.instrument.getDec().toDMS().__str__(), 'Custom. Declination of the observed object'),
         #         ("EQUINOX", 2000.0, "Custom. coordinate epoch"),
+        sensors = self.instrument.getSensors()
+        TM1 = ' INDEF '
+        TM2 = ' INDEF '
+        TFR = ' INDEF '
+        TTR = ' INDEF '
+        for entry in sensors:
+            if "TM1" in entry[0]:
+                TM1 = entry[1]
+                continue
+            elif "TM2" in entry[0]:
+                TM2 = entry[1]
+                continue
+            elif "FrontRing" in entry[0]:
+                TFR = entry[1]
+                continue
+            elif "TubeRod" in entry[0]:
+                TTR = entry[1]
+                continue
+
         return [('TELESCOP', self.instrument['model'], 'Telescope Model'),
                 ('RA', self.instrument.getRa().toHMS().__str__(), 'Right ascension of the observed object'),
                 ('DEC', self.instrument.getDec().toDMS().__str__(), 'Declination of the observed object'),
@@ -242,19 +192,18 @@ class T80SHeaders(ChimeraObject):
                 ("EQUINOX", 2000.0, "coordinate epoch"),
                 ('HIERARCH T80S TEL OPER', 'CHIMERA'),
                 ('HIERARCH T80S TEL FOCU LEN', self.instrument['focal_length'], ' Focal length (mm)'),
-                ('HIERARCH T80S TEL EL START', ' 69.62205 '),  # TODO:
-                ('HIERARCH T80S TEL EL END', ' 69.49747 '),  # TODO:
-                ('HIERARCH T80S TEL AZ START', ' 334.61893'),  # TODO:
-                ('HIERARCH T80S TEL AZ END', ' 334.16395'),  # TODO:
-                ('HIERARCH T80S TEL PARANG START', ' 142.27750', ' Parallactic angle at start (deg)'),  # TODO:
-                ('HIERARCH T80S TEL PARANG END', ' 141.53369', ' Parallactic angle at end (deg) '),  # TODO:
+                ('HIERARCH T80S TEL EL START', self.instrument.getAlt().toD().__str__()),
+                ('HIERARCH T80S TEL AZ START', self.instrument.getAz().toD().__str__()),
+                ('HIERARCH T80S TEL PARANG START', self.instrument.getParallacticAngle().toD().__str__(), ' Parallactic angle at start (deg)'),
                 ('HIERARCH T80S TEL TRAK STATUS', 'TRACKING GOOD', ' Tracking status'),  # TODO:
-                ('HIERARCH T80S TEL AIRM START', '1.06672 ', ' Airmass at start of exposure'),  # TODO:
-                ('HIERARCH T80S TEL AIRM END', ' 1.06758 ', ' Airmass at end of exposure'),  # TODO:
-                ('HIERARCH T80S TEL MIRR S1 TEMP', ' 16.06000 ', ' Mirror surface temperature'),  # TODO:
-                ('HIERARCH T80S TEL POINT MODE', 'NORMAL'),  # TODO:
-                ('HIERARCH T80S DPR CATG', 'SCIENCE'),  # TODO:
-                ('HIERARCH T80S DPR TYPE', 'OBJECT')]  # TODO:
+                ('HIERARCH T80S TEL AIRM START', 1 / cos(pi / 2 - self.instrument.getAlt().R), ' Airmass at start of exposure'),
+                ('HIERARCH T80S TEL MIRR S1 TEMP', TM1, ' Primary mirror surface temperature'),
+                ('HIERARCH T80S TEL MIRR S2 TEMP', TM2, ' Secondary mirror surface temperature'),
+                ('HIERARCH T80S TEL FRONT RING TEMP', TFR, ' Telescope front ring temperature'),
+                ('HIERARCH T80S TEL TUBE ROD TEMP', TTR, ' Telescope tube rod temperature'),
+                ('HIERARCH T80S TEL POINT MODE', self.instrument.getPSOrientation()[1]),
+                ('HIERARCH T80S DPR CATG', 'SCIENCE' if request.type == 'object' else 'CALIBRATION'),  # TODO:
+                ('HIERARCH T80S DPR TYPE', request.type)]
 
 
     def getMetadataWeatherStation(self, request):
