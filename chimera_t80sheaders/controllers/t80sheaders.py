@@ -2,7 +2,7 @@ from math import pi, cos, sin
 
 from chimera.core.chimeraobject import ChimeraObject
 from chimera.core.exceptions import ObjectNotFoundException, ChimeraException
-
+from chimera.interfaces.focuser import FocuserAxis
 
 
 #####
@@ -99,7 +99,7 @@ class T80SHeaders(ChimeraObject):
         Returns the modified metadata for a camera instrument. On T80CamS most of the header metadata is included
         by the camera driver itself, directly during readout operation. Here we just gather info about the filterwheel.
         '''
-
+        self.log.debug('Getting CAMERA HEADER')
         return [('FILTER', str(self.instrument.getFilter()), 'Filter used for this observation')]
 
 
@@ -107,22 +107,24 @@ class T80SHeaders(ChimeraObject):
         '''
         Returns the modified metadata for a focuser instrument.
         '''
-        x, y, z, u, v = self.getRealPosition()
-        dx, dy, dz, du, dv = self.getOffset()
+        # x, y, z, u, v = self.getPosition()
+        # dx, dy, dz, du, dv = self.getOffset()
+        self.log.debug('Getting FOCUSER HEADER')
 
-        return [('HIERARCH T80S TEL FOCU HEX X', ' %f '%x, ' Current hexapod position in x (mm) '),
-                ('HIERARCH T80S TEL FOCU HEX Y', ' %f '%y, ' Current hexapod position in y (mm) '),
-                ('HIERARCH T80S TEL FOCU HEX Z', ' %f '%z, ' Current hexapod position in z (mm) '),
-                ('HIERARCH T80S TEL FOCU HEX U', ' %f '%u, ' Current hexapod position in U (degree) '),
-                ('HIERARCH T80S TEL FOCU HEX V', ' %f '%v, ' Current hexapod position in V (degree) '),
-                ('HIERARCH T80S TEL FOCU HEX DX', ' %f '%dx, ' Current hexapod offset in x (mm) '),
-                ('HIERARCH T80S TEL FOCU HEX DY', ' %f '%dy, ' Current hexapod offset in y (mm) '),
-                ('HIERARCH T80S TEL FOCU HEX DZ', ' %f '%dz, ' Current hexapod offset in z (mm) '),
-                ('HIERARCH T80S TEL FOCU HEX DU', ' %f '%du, ' Current hexapod offset in U (degree) '),
-                ('HIERARCH T80S TEL FOCU HEX DV', ' %f '%dv, ' Current hexapod offset in V (degree) '),
-                ('HIERARCH T80S TEL FOCU LEN', ' %f '%z, ' Current focus position (mm) '),
+        return [('HIERARCH T80S TEL FOCU HEX X', ' %f '%self.instrument.getPosition(FocuserAxis.X),
+                 ' Current hexapod position in x (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX Y', ' %f '%self.instrument.getPosition(FocuserAxis.Y), ' Current hexapod position in y (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX Z', ' %f '%self.instrument.getPosition(FocuserAxis.Z), ' Current hexapod position in z (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX U', ' %f '%self.instrument.getPosition(FocuserAxis.U), ' Current hexapod position in U (degree) '),
+                ('HIERARCH T80S TEL FOCU HEX V', ' %f '%self.instrument.getPosition(FocuserAxis.V), ' Current hexapod position in V (degree) '),
+                ('HIERARCH T80S TEL FOCU HEX DX', ' %f '%self.instrument.getOffset(FocuserAxis.X), ' Current hexapod offset in x (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX DY', ' %f '%self.instrument.getOffset(FocuserAxis.Y), ' Current hexapod offset in y (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX DZ', ' %f '%self.instrument.getOffset(FocuserAxis.Z), ' Current hexapod offset in z (mm) '),
+                ('HIERARCH T80S TEL FOCU HEX DU', ' %f '%self.instrument.getOffset(FocuserAxis.U), ' Current hexapod offset in U (degree) '),
+                ('HIERARCH T80S TEL FOCU HEX DV', ' %f '%self.instrument.getOffset(FocuserAxis.V), ' Current hexapod offset in V (degree) '),
+                ('HIERARCH T80S TEL FOCU LEN', ' %f '%self.instrument.getPosition(FocuserAxis.Z), ' Current focus position (mm) '),
                 ('HIERARCH T80S TEL FOCU SCALE', ' 55.56', ' Focus scale (arcsec/mm) '),  #TODO
-                ('HIERARCH T80S TEL FOCU VALUE', ' %f '%dz, ' Current focus offset (mm) '),
+                ('HIERARCH T80S TEL FOCU VALUE', ' %f '%self.instrument.getOffset(FocuserAxis.Z), ' Current focus offset (mm) '),
                 ]
 
 
@@ -130,6 +132,7 @@ class T80SHeaders(ChimeraObject):
         '''
         Returns the modified metadata for a dome instrument.
         '''
+        self.log.debug('Getting DOME HEADER')
         if self.instrument.isSlitOpen():
             slit = 'Open'
         else:
@@ -145,6 +148,7 @@ class T80SHeaders(ChimeraObject):
         '''
         Returns the modified metadata for a telescope instrument.
         '''
+        self.log.debug('Getting TELESCOPE HEADER')
         # return [('TELESCOP', self.instrument['model'], 'Custom. Telescope Model'),
         #         ('OPTICS',   self.instrument['optics'], 'Custom. Telescope Optics Type'),
         #         ('MOUNT', self.instrument['mount'], 'Custom. Telescope Mount Type'),
@@ -175,16 +179,25 @@ class T80SHeaders(ChimeraObject):
                 TTR = entry[1]
                 continue
 
+        self.log.debug('Getting RA')
+        ra = self.instrument.getRa()
+        self.log.debug('Getting Dec')
+        dec = self.instrument.getDec()
+        self.log.debug('Getting Alt')
+        alt = self.instrument.getAlt()
+        self.log.debug('Getting Az')
+        az = self.instrument.getAz()
+        self.log.debug('All getters done...')
         return [('TELESCOP', self.instrument['model'], 'Telescope Model'),
-                ('RA', self.instrument.getRa().toHMS().__str__(), 'Right ascension of the observed object'),
-                ('DEC', self.instrument.getDec().toDMS().__str__(), 'Declination of the observed object'),
-                ('ALT', self.instrument.getAlt().toDMS().__str__(), 'Custom. Altitude of the observed object'),
-                ('AZ', self.instrument.getAz().toDMS().__str__(), 'Custom. Azimuth of the observed object'),
-                ('AIRMASS', 1 / cos(pi / 2 - self.instrument.getAlt().R), 'air mass at the end of observation'),
+                ('RA', ra.toHMS().__str__(), 'Right ascension of the observed object'),
+                ('DEC', dec.toDMS().__str__(), 'Declination of the observed object'),
+                ('ALT', alt.toDMS().__str__(), 'Custom. Altitude of the observed object'),
+                ('AZ', az.toDMS().__str__(), 'Custom. Azimuth of the observed object'),
+                ('AIRMASS', 1 / cos(pi / 2 - az.R), 'air mass at the end of observation'),
                 ("WCSAXES", 2, "wcs dimensionality"),
                 ("RADESYS", "ICRS", "frame of reference"),
-                ("CRVAL1", self.instrument.getTargetRaDec().ra.D, "coordinate system value at reference pixel"),
-                ("CRVAL2", self.instrument.getTargetRaDec().dec.D, "coordinate system value at reference pixel"),
+                ("CRVAL1", ra.D, "coordinate system value at reference pixel"),
+                ("CRVAL2", dec.D, "coordinate system value at reference pixel"),
                 ("CTYPE1", 'RA---TAN', "name of the coordinate axis"),
                 ("CTYPE2", 'DEC--TAN', "name of the coordinate axis"),
                 ("CUNIT1", 'deg', "units of coordinate value"),
@@ -192,38 +205,37 @@ class T80SHeaders(ChimeraObject):
                 ("EQUINOX", 2000.0, "coordinate epoch"),
                 ('HIERARCH T80S TEL OPER', 'CHIMERA'),
                 ('HIERARCH T80S TEL FOCU LEN', self.instrument['focal_length'], ' Focal length (mm)'),
-                ('HIERARCH T80S TEL EL START', self.instrument.getAlt().toD().__str__()),
-                ('HIERARCH T80S TEL AZ START', self.instrument.getAz().toD().__str__()),
+                ('HIERARCH T80S TEL EL START', alt.toD().__str__()),
+                ('HIERARCH T80S TEL AZ START', az.toD().__str__()),
                 ('HIERARCH T80S TEL PARANG START', self.instrument.getParallacticAngle().toD().__str__(), ' Parallactic angle at start (deg)'),
                 ('HIERARCH T80S TEL TRAK STATUS', 'TRACKING GOOD', ' Tracking status'),  # TODO:
-                ('HIERARCH T80S TEL AIRM START', 1 / cos(pi / 2 - self.instrument.getAlt().R), ' Airmass at start of exposure'),
+                ('HIERARCH T80S TEL AIRM START', 1 / cos(pi / 2 - alt.R), ' Airmass at start of exposure'),
                 ('HIERARCH T80S TEL MIRR S1 TEMP', TM1, ' Primary mirror surface temperature'),
                 ('HIERARCH T80S TEL MIRR S2 TEMP', TM2, ' Secondary mirror surface temperature'),
                 ('HIERARCH T80S TEL FRONT RING TEMP', TFR, ' Telescope front ring temperature'),
                 ('HIERARCH T80S TEL TUBE ROD TEMP', TTR, ' Telescope tube rod temperature'),
                 ('HIERARCH T80S TEL POINT MODE', self.instrument.getPSOrientation()[1]),
-                ('HIERARCH T80S DPR CATG', 'SCIENCE' if request.type == 'object' else 'CALIBRATION'),  # TODO:
-                ('HIERARCH T80S DPR TYPE', request.type)]
+                ('HIERARCH T80S DPR CATG', 'SCIENCE' if request["type"] == 'object' else 'CALIBRATION'),  # TODO:
+                ('HIERARCH T80S DPR TYPE', request["type"])]
 
 
     def getMetadataWeatherStation(self, request):
         # TODO: Weather station metadata.
-        return [('HIERARCH T80S GEN AMBI WIND SPDMEAN', ' 4.90'),
-                ('HIERARCH T80S GEN AMBI WIND SPDRMS', ' 4.92'),
-                ('HIERARCH T80S GEN AMBI WIND DIRMEAN', ' 17.1'),
-                ('HIERARCH T80S GEN AMBI WIND DIRRMS', ' 60.5'),
-                ('HIERARCH T80S GEN AMBI RHUMMEAN', ' 10.4'),
-                ('HIERARCH T80S GEN AMBI RHUMRMS', ' 10.4'),
-                ('HIERARCH T80S GEN AMBI PRESMEAN', ' 811.66'),
-                ('HIERARCH T80S GEN AMBI PRESRMS', ' 811.66'),
-                ('HIERARCH T80S GEN AMBI TEMPMEAN', ' 7.402'),
-                ('HIERARCH T80S GEN AMBI TEMPRMS', ' 7.414')]
+        self.log.debug('Getting WEATHER STATION HEADER')
+        return [('HIERARCH T80S GEN AMBI WIND SPDMEAN', self.instrument.wind_speed().value),
+                ('HIERARCH T80S GEN AMBI WIND DIRMEAN', self.instrument.wind_dir().value),
+                ('HIERARCH T80S GEN AMBI RHUMMEAN', self.instrument.humidity().value),
+                ('HIERARCH T80S GEN AMBI PRESMEAN', self.instrument.pressure().value),
+                ('HIERARCH T80S GEN AMBI TEMPMEAN', self.instrument.temperature().value),
+                ]
 
     def getMetadataSite(self, request):
+        self.log.debug('Getting SITE HEADER')
         return [('ORIGIN', self.instrument['name'], 'Site name (in config)'),
                 ('LATITUDE', str(self.instrument['latitude']), 'Site latitude'),
                 ('LONGITUD', str(self.instrument['longitude']), 'Site longitude'),
                 ('ALTITUDE', str(self.instrument['altitude']), 'Site altitude'),
+                ('TIMESYS', 'UTC'),
                 ('HIERARCH T80S TEL GEOELEV', str(self.instrument['altitude'])),
                 ('HIERARCH T80S TEL GEOLAT', str(self.instrument['latitude'].D)),
                 ('HIERARCH T80S TEL GEOLON', str(self.instrument['longitude'].D))]
