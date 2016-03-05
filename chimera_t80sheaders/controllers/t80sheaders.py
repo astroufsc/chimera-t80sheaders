@@ -140,9 +140,9 @@ class T80SHeaders(ChimeraObject):
 
         return [('DOME_MDL', str(self.instrument['model']), 'Dome Model'),
                 ('DOME_TYP', str(self.instrument['style']), 'Dome Type'),
-                ('DOME_TRK', str(self.instrument['mode']), 'Dome Tracking/Standing'),
+                ('DOME_TRK', str(self.instrument.getMode()), 'Dome Tracking/Standing'),
                 ('DOME_SLT', str(slit), 'Dome slit status'),
-                ('HIERARCH OAJ TEL DOME AZ', str(self.instrument.getAz().D), 'dome azimuth'),]
+                ('HIERARCH T80S TEL DOME AZ', str(self.instrument.getAz().D), 'dome azimuth'),]
 
     def getMetadataTelescope(self, request):
         '''
