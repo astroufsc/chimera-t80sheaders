@@ -193,7 +193,7 @@ class T80SHeaders(ChimeraObject):
                 ('DEC', dec.toDMS().__str__(), 'Declination of the observed object'),
                 ('ALT', alt.toDMS().__str__(), 'Custom. Altitude of the observed object'),
                 ('AZ', az.toDMS().__str__(), 'Custom. Azimuth of the observed object'),
-                ('AIRMASS', 1 / cos(pi / 2 - az.R), 'air mass at the end of observation'),
+                ('AIRMASS', 1 / cos(pi / 2 - alt.R), 'air mass at the end of observation'),
                 ("WCSAXES", 2, "wcs dimensionality"),
                 ("RADESYS", "ICRS", "frame of reference"),
                 ("CRVAL1", ra.D, "coordinate system value at reference pixel"),
