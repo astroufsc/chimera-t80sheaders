@@ -123,7 +123,7 @@ class T80SHeaders(ChimeraObject):
                 ('HIERARCH T80S TEL FOCU HEX DU', ' %f '%self.instrument.getOffset(FocuserAxis.U), ' Current hexapod offset in U (degree) '),
                 ('HIERARCH T80S TEL FOCU HEX DV', ' %f '%self.instrument.getOffset(FocuserAxis.V), ' Current hexapod offset in V (degree) '),
                 ('HIERARCH T80S TEL FOCU LEN', ' %f '%self.instrument.getPosition(FocuserAxis.Z), ' Current focus position (mm) '),
-                ('HIERARCH T80S TEL FOCU SCALE', ' 55.56', ' Focus scale (arcsec/mm) '),  #TODO
+                # ('HIERARCH T80S TEL FOCU SCALE', ' 55.56', ' Focus scale (arcsec/mm) '),  #TODO
                 ('HIERARCH T80S TEL FOCU VALUE', ' %f '%self.instrument.getOffset(FocuserAxis.Z), ' Current focus offset (mm) '),
                 ]
 
@@ -208,7 +208,7 @@ class T80SHeaders(ChimeraObject):
                 ('HIERARCH T80S TEL EL START', alt.toD().__str__()),
                 ('HIERARCH T80S TEL AZ START', az.toD().__str__()),
                 ('HIERARCH T80S TEL PARANG START', self.instrument.getParallacticAngle().toD().__str__(), ' Parallactic angle at start (deg)'),
-                ('HIERARCH T80S TEL TRAK STATUS', 'TRACKING GOOD', ' Tracking status'),  # TODO:
+                # ('HIERARCH T80S TEL TRAK STATUS', 'TRACKING GOOD', ' Tracking status'),  # TODO:
                 ('HIERARCH T80S TEL AIRM START', 1 / cos(pi / 2 - alt.R), ' Airmass at start of exposure'),
                 ('HIERARCH T80S TEL MIRR S1 TEMP', TM1, ' Primary mirror surface temperature'),
                 ('HIERARCH T80S TEL MIRR S2 TEMP', TM2, ' Secondary mirror surface temperature'),
