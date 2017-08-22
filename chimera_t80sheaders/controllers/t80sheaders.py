@@ -234,6 +234,8 @@ class T80SHeaders(ChimeraObject):
     def getMetadataWeatherStation(self, request):
         # TODO: Weather station metadata.
         self.log.debug('Getting WEATHER STATION HEADER')
+        if self.instrument.temperature() is None:
+            return
         return [('HIERARCH T80S GEN AMBI WIND SPDMEAN', self.instrument.wind_speed().value),
                 ('HIERARCH T80S GEN AMBI WIND DIRMEAN', self.instrument.wind_dir().value),
                 ('HIERARCH T80S GEN AMBI RHUMMEAN', self.instrument.humidity().value),
@@ -243,6 +245,8 @@ class T80SHeaders(ChimeraObject):
 
     def getMetadataSeeingMonitor(self, request):
         self.log.debug('Getting SEEING MONITOR HEADER')
+        if self.instrument.seeing(unit=units.arcsec) is None:
+            return
         return [('SEEMOD', str(self.instrument['model']), 'Seeing monitor Model'),
                 ('SEETYP', str(self.instrument['type']), 'Seeing monitor type'),
                 ('SEEVAL', self.instrument.seeing(unit=units.arcsec).value, '[arcsec] Seeing value'),
