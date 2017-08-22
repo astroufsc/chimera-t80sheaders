@@ -1,5 +1,6 @@
 from math import pi, cos, sin
 
+from astropy import units
 from chimera.core.chimeraobject import ChimeraObject
 from chimera.core.exceptions import ObjectNotFoundException, ChimeraException
 from chimera.interfaces.focuser import FocuserAxis
@@ -25,7 +26,8 @@ class T80SHeaders(ChimeraObject):
                   "focuser": None,
                   "site": None,
                   "telescope": None,
-                  "weatherstation": None}
+                  "weatherstation": None,
+                  "seeingmonitor": None}
 
     def __init__(self):
         ChimeraObject.__init__(self)
@@ -39,6 +41,7 @@ class T80SHeaders(ChimeraObject):
                                    "telescope": self.getMetadataTelescope,
                                    "site": self.getMetadataSite,
                                    "weatherstation": self.getMetadataWeatherStation,
+                                   "seeingmonitor": self.getMetadataSeeingMonitor
                                    }
         # Get instrument type and location
         self.instrument_type, self.instrument_location = self._get_instrument_name()
@@ -46,7 +49,15 @@ class T80SHeaders(ChimeraObject):
         self.log.info("Overriding %s instrument metadata methods to the ones from %s" % (self.instrument_location,
                                                                                          self.getLocation()))
         # Set the instrument getMetadata location to this class.
-        self.instrument.setMetadataMethod(self.getLocation())
+        # This should include the ip and port, for the case the instrument is on a remote computer.
+        # E.g.: 192.168.10.10:7666/Headers/mytelescope
+        manager = self.getManager()
+        self.instrument.setMetadataMethod('%s:%s%s' % (manager.getHostname(), manager.getPort(), self.getLocation()))
+
+    def __stop__(self):
+        # Unset the instrument getMetadata location to this class.
+        self.instrument.setMetadataMethod(None)
+
 
     def _get_instrument_name(self):
         '''
@@ -138,8 +149,9 @@ class T80SHeaders(ChimeraObject):
         else:
             slit = 'Closed'
 
-        return [('DOME_MDL', str(self.instrument['model']), 'Dome Model'),
-                ('DOME_TYP', str(self.instrument['style']), 'Dome Type'),
+        return [
+                # ('DOME_MDL', str(self.instrument['model']), 'Dome Model'), # TODO:
+                # ('DOME_TYP', str(self.instrument['style']), 'Dome Type'),  #TODO:
                 ('DOME_TRK', str(self.instrument.getMode()), 'Dome Tracking/Standing'),
                 ('DOME_SLT', str(slit), 'Dome slit status'),
                 ('HIERARCH T80S TEL DOME AZ', str(self.instrument.getAz().D), 'dome azimuth'),]
@@ -227,6 +239,15 @@ class T80SHeaders(ChimeraObject):
                 ('HIERARCH T80S GEN AMBI RHUMMEAN', self.instrument.humidity().value),
                 ('HIERARCH T80S GEN AMBI PRESMEAN', self.instrument.pressure().value),
                 ('HIERARCH T80S GEN AMBI TEMPMEAN', self.instrument.temperature().value),
+                ]
+
+    def getMetadataSeeingMonitor(self, request):
+        self.log.debug('Getting SEEING MONITOR HEADER')
+        return [('SEEMOD', str(self.instrument['model']), 'Seeing monitor Model'),
+                ('SEETYP', str(self.instrument['type']), 'Seeing monitor type'),
+                ('SEEVAL', self.instrument.seeing(unit=units.arcsec).value, '[arcsec] Seeing value'),
+                ('SEEFLU', self.instrument.flux(unit=units.count).value, '[counts] Star flux value'),
+                ('SEEDAT', self.instrument.obs_time().strftime("%Y-%m-%dT%H:%M:%S.%f"), 'UT time of the seeing observation')
                 ]
 
     def getMetadataSite(self, request):
